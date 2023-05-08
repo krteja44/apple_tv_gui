@@ -1,34 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/router";
 
-export default function Authorize() {
+export default function Authorize({ authenticated, refValue, response }) {
   const [referenceValue, setReferenceValue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
-    if (!router.isReady) return;
-    if (router.query.ref) {
-      setReferenceValue(router.query.ref);
-      getUserAuthStatus(router.query.ref);
-    }
-  }, [router.query]);
+    setIsAuthenticated(authenticated);
+  }, [authenticated]);
 
-  const getUserAuthStatus = async (ref) => {
-    const data = await fetch(process.env.NEXT_PUBLIC_BACKEND_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ REF: ref }),
-    });
-    if (data) {
-      const response = await data.json();
-      setLoading(false);
-      setIsAuthenticated(true);
-    }
-  };
+  useEffect(() => {
+    setReferenceValue(refValue);
+  }, [refValue]);
 
   return (
     <>
@@ -54,4 +37,48 @@ export default function Authorize() {
       )}
     </>
   );
+}
+
+export async function getServerSideProps({ query }) {
+  if (!query.ref) {
+    // TODO: Throw error for insufficient data
+    return {
+      redirect: {
+        destination: "/404",
+      },
+    };
+  }
+  try {
+    const data = await fetch(process.env.NEXT_PUBLIC_BACKEND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ REF: query.ref }),
+    });
+    if (data) {
+      const response = await data.json();
+      return {
+        props: {
+          refValue: query.ref,
+          authenticated: true,
+          response,
+        },
+      };
+    } else {
+      console.log("here----");
+      return {
+        redirect: {
+          destination: "/500",
+        },
+      };
+    }
+  } catch (error) {
+    console.log("something bad happend!!!", error);
+    return {
+      redirect: {
+        destination: "/500",
+      },
+    };
+  }
 }
