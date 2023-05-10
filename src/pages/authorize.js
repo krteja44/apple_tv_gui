@@ -39,8 +39,8 @@ export default function Authorize({ authenticated, refValue, response }) {
   );
 }
 
-export async function getServerSideProps({ query }) {
-  if (!query.ref) {
+export async function getServerSideProps({ query, req }) {
+  if (!query.ref || req.headers.host !== process.env.NEXT_PUBLIC_VALID_HOST) {
     // TODO: Throw error for insufficient data
     return {
       redirect: {
